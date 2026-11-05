@@ -1,0 +1,13 @@
+{
+  "name": "musicapp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI music generator powered by sunoapi.org, deployable on Netlify",
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
