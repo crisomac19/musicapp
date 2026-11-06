@@ -97,7 +97,17 @@ function checkPassword(req) {
   return req.headers.get("x-app-password") === required;
 }
 
-export default async (req) => {
+function countryOf(req, context) {
+  const fromCtx = context?.geo?.country?.code;
+  if (fromCtx) return fromCtx;
+  const raw = req.headers.get("x-nf-geo");
+  if (raw) {
+    try { return JSON.parse(Buffer.from(raw, "base64").toString("utf8"))?.country?.code || ""; } catch {}
+  }
+  return req.headers.get("x-country") || "";
+}
+
+export default async (req, context) => {
   const url = new URL(req.url);
   const route = url.pathname.replace(/^\/(\.netlify\/functions\/api|api)\/?/, "").replace(/\/$/, "");
   const callBackUrl = `${url.origin}/api/callback`;
@@ -107,7 +117,7 @@ export default async (req) => {
     if (route === "callback") return json(200, { status: "received" });
 
     if (route === "config" && req.method === "GET") {
-      return json(200, { ok: true, data: { passwordRequired: Boolean(process.env.APP_PASSWORD) } });
+      return json(200, { ok: true, data: { passwordRequired: Boolean(process.env.APP_PASSWORD), country: countryOf(req, context) } });
     }
 
     if (!checkPassword(req)) return json(401, { ok: false, error: "Wrong or missing app password.", needPassword: true });

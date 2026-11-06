@@ -1,4 +1,4 @@
-# Songsmith — AI Music Generator
+# Compose your song with Dr. Cris
 
 A web app where people describe a song and get two full AI-generated tracks, powered by [sunoapi.org](https://docs.sunoapi.org/). Built to deploy on Netlify with no build step.
 
@@ -11,6 +11,7 @@ A web app where people describe a song and get two full AI-generated tracks, pow
 - Live progress, early streaming when the first take is ready, a built-in player, downloads, and copying lyrics.
 - Library saved in the browser (localStorage). Unfinished songs keep checking for results after a reload.
 - Remaining-credit indicator.
+- **Automatic language**: English, Spanish, Portuguese or French, chosen from the visitor's country using Netlify's geolocation (for example US → English, Peru → Spanish, Brazil → Portuguese). If the country isn't mapped, the browser language is used instead. Visitors can switch with the 🌐 picker, and their choice is remembered. Translations are in `public/i18n.js`; to add a language, add a strings block there and map its countries.
 
 ## How it works
 

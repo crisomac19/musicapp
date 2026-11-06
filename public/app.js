@@ -1,8 +1,10 @@
-// Songsmith front-end. Talks only to our own /api/* Netlify function.
+// Dr. Cris song composer front-end. Talks only to our own /api/* Netlify function.
+import { LANGS, STRINGS, pickLang } from "/i18n.js";
 
 const $ = (s) => document.querySelector(s);
 const LS_JOBS = "songsmith.jobs.v1";
 const LS_PW = "songsmith.pw";
+const LS_LANG = "songsmith.lang";
 const POLL_MS = 6000;
 const MAX_WAIT_MS = 12 * 60 * 1000;
 
@@ -10,27 +12,42 @@ const STYLE_CHIPS = [
   "Pop", "Hip-hop", "R&B", "Lo-fi", "EDM", "House", "Rock", "Indie", "Acoustic",
   "Jazz", "Country", "Reggaeton", "Latin", "Afrobeats", "Cinematic", "Piano ballad", "Synthwave", "Metal",
 ];
-const VARIETY = ["Off", "Normal", "High", "Extra", "Max"];
 const FAIL = ["CREATE_TASK_FAILED", "GENERATE_AUDIO_FAILED", "CALLBACK_EXCEPTION", "SENSITIVE_WORD_ERROR", "GENERATE_LYRICS_FAILED", "FAILED"];
-const STATUS_TEXT = {
-  PENDING: "Queued…",
-  TEXT_SUCCESS: "Writing music…",
-  FIRST_SUCCESS: "First take ready, finishing…",
-  SUCCESS: "Ready",
-  SENSITIVE_WORD_ERROR: "Blocked: prompt contains restricted words",
-  CREATE_TASK_FAILED: "Failed to start",
-  GENERATE_AUDIO_FAILED: "Generation failed",
-  CALLBACK_EXCEPTION: "Generation failed",
-  TIMEOUT: "Timed out",
-};
 const STATUS_PROGRESS = { PENDING: 15, TEXT_SUCCESS: 40, FIRST_SUCCESS: 75, SUCCESS: 100 };
 
 let mode = "simple";
+let lang = "en";
 let jobs = load();
 let password = safeGet(LS_PW) || "";
 const pollers = new Map();
 
 // ---------- utils ----------
+function t(key, vars = {}) {
+  const v = STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key;
+  return typeof v === "string" ? v.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "") : v;
+}
+const statusText = (s) => (STRINGS[lang][`st_${s}`] || STRINGS.en[`st_${s}`] ? t(`st_${s}`) : "");
+
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.title = t("pageTitle");
+  document.querySelectorAll("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => (el.innerHTML = t(el.dataset.i18nHtml)));
+  document.querySelectorAll("[data-i18n-ph]").forEach((el) => (el.placeholder = t(el.dataset.i18nPh)));
+  document.querySelectorAll("[data-i18n-content]").forEach((el) => el.setAttribute("content", t(el.dataset.i18nContent)));
+  $("#langSelect").value = lang;
+  $("#durationOut").textContent = Number($("#duration").value) === 0 ? t("auto") : fmt($("#duration").value);
+  $("#varietyOut").textContent = t("varietyLevels")[$("#variety").value];
+  if (lastCredits !== null) $("#creditsValue").textContent = t("credits", { n: Number(lastCredits).toLocaleString(lang) });
+  render();
+}
+
+function setLang(l, persist) {
+  lang = LANGS[l] ? l : "en";
+  if (persist) safeSet(LS_LANG, lang);
+  applyI18n();
+}
+
 function safeGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function safeSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
 function load() { try { return JSON.parse(safeGet(LS_JOBS)) || []; } catch { return []; } }
@@ -79,15 +96,17 @@ function askPassword(wrong = false) {
 }
 
 // ---------- credits ----------
+let lastCredits = null;
 async function refreshCredits() {
   const el = $("#credits");
   try {
     const n = await api("credits");
-    $("#creditsValue").textContent = `${Number(n).toLocaleString()} credits`;
+    lastCredits = n;
+    $("#creditsValue").textContent = t("credits", { n: Number(n).toLocaleString(lang) });
     el.classList.toggle("ok", n >= 20);
     el.classList.toggle("low", n < 20);
   } catch (e) {
-    $("#creditsValue").textContent = "credits unavailable";
+    $("#creditsValue").textContent = t("creditsNA");
     el.title = e.message;
   }
 }
@@ -145,12 +164,12 @@ function bindCounters() {
 
 function bindSliders() {
   const d = $("#duration");
-  const updD = () => ($("#durationOut").textContent = Number(d.value) === 0 ? "auto" : fmt(d.value));
+  const updD = () => ($("#durationOut").textContent = Number(d.value) === 0 ? t("auto") : fmt(d.value));
   d.addEventListener("input", updD); updD();
   const sw = $("#styleWeight"), wd = $("#weirdness"), va = $("#variety");
   sw.addEventListener("input", () => ($("#styleWeightOut").textContent = Number(sw.value).toFixed(2)));
   wd.addEventListener("input", () => ($("#weirdnessOut").textContent = Number(wd.value).toFixed(2)));
-  va.addEventListener("input", () => ($("#varietyOut").textContent = VARIETY[va.value]));
+  va.addEventListener("input", () => ($("#varietyOut").textContent = t("varietyLevels")[va.value]));
 }
 
 function collect() {
@@ -179,8 +198,8 @@ function collect() {
 }
 
 function validate(p) {
-  if (!p.customMode && !p.prompt && !p.style) return "Describe the song you want (or add a style).";
-  if (p.customMode && !p.style && !p.lyrics && !p.negativeTags) return "Add a style or some lyrics.";
+  if (!p.customMode && !p.prompt && !p.style) return t("errDescribe");
+  if (p.customMode && !p.style && !p.lyrics && !p.negativeTags) return t("errCustom");
   return "";
 }
 
@@ -194,14 +213,14 @@ async function onSubmit(e) {
 
   const btn = $("#submitBtn");
   btn.disabled = true; btn.classList.add("loading");
-  btn.querySelector(".btn-label").textContent = "Starting…";
+  btn.querySelector(".btn-label").textContent = t("starting");
   try {
     const data = await api("generate", { method: "POST", body: JSON.stringify(payload) });
     const job = {
       taskId: data.taskId,
       createdAt: Date.now(),
       status: "PENDING",
-      summary: payload.title || payload.prompt || payload.style || "Untitled",
+      summary: payload.title || payload.prompt || payload.style || t("untitled"),
       style: payload.style,
       instrumental: payload.instrumental,
       model: payload.model,
@@ -209,12 +228,12 @@ async function onSubmit(e) {
     };
     jobs.unshift(job); save(); render();
     poll(job.taskId);
-    toast("Song started — this takes about a minute.");
+    toast(t("started"));
   } catch (e2) {
     err.textContent = e2.message; err.hidden = false;
   } finally {
     btn.disabled = false; btn.classList.remove("loading");
-    btn.querySelector(".btn-label").textContent = "Create song";
+    btn.querySelector(".btn-label").textContent = t("create");
   }
 }
 
@@ -225,7 +244,7 @@ async function onGenLyrics() {
   if (!prompt) { $("#lyricsPrompt").focus(); return; }
   const btn = $("#genLyrics");
   btn.disabled = true;
-  box.innerHTML = `<div class="mini-status">Writing lyrics…</div>`;
+  box.innerHTML = `<div class="mini-status">${esc(t("writingLyrics"))}</div>`;
   try {
     const { taskId } = await api("lyrics", { method: "POST", body: JSON.stringify({ prompt }) });
     const start = Date.now();
@@ -234,22 +253,22 @@ async function onGenLyrics() {
       const d = await api(`lyrics-status?taskId=${encodeURIComponent(taskId)}`);
       if (d.status === "SUCCESS") {
         const opts = (d.response?.data || []).filter((o) => o.status !== "failed" && o.text);
-        if (!opts.length) throw new Error("No lyrics returned. Try a different idea.");
+        if (!opts.length) throw new Error(t("noLyrics"));
         box.innerHTML = opts.map((o, i) =>
-          `<button type="button" class="lyric-opt" data-i="${i}"><strong>${esc(o.title || `Option ${i + 1}`)} — use this</strong>${esc(o.text)}</button>`).join("");
+          `<button type="button" class="lyric-opt" data-i="${i}"><strong>${esc(o.title || t("option", { n: i + 1 }))} — ${esc(t("useThis"))}</strong>${esc(o.text)}</button>`).join("");
         box.onclick = (e) => {
           const b = e.target.closest(".lyric-opt"); if (!b) return;
           const o = opts[Number(b.dataset.i)];
           $("#lyrics").value = o.text;
           $("#lyrics").dispatchEvent(new Event("input"));
           if (!$("#title").value && o.title) $("#title").value = o.title.slice(0, 80);
-          toast("Lyrics added.");
+          toast(t("lyricsAdded"));
         };
         return;
       }
-      if (FAIL.includes(d.status)) throw new Error(d.errorMessage || STATUS_TEXT[d.status] || "Lyrics generation failed.");
+      if (FAIL.includes(d.status)) throw new Error(d.errorMessage || statusText(d.status) || t("lyricsFailed"));
     }
-    throw new Error("Lyrics took too long. Try again.");
+    throw new Error(t("lyricsSlow"));
   } catch (e) {
     box.innerHTML = `<div class="error-text">${esc(e.message)}</div>`;
   } finally {
@@ -285,7 +304,7 @@ async function poll(taskId) {
         job.status = d.status || job.status;
         const tracks = normalizeTracks(d);
         if (tracks.length) job.tracks = tracks;
-        if (FAIL.includes(job.status)) job.error = d.errorMessage || STATUS_TEXT[job.status];
+        if (FAIL.includes(job.status)) job.error = d.errorMessage || "";
         save(); render();
         if (job.status === "SUCCESS" || FAIL.includes(job.status)) break;
       } catch (e) {
@@ -314,9 +333,9 @@ function renderJob(job) {
   const done = job.status === "SUCCESS";
   const failed = FAIL.includes(job.status) || job.status === "TIMEOUT";
   const pending = !done && !failed;
-  const badge = done ? `<span class="badge done">Ready</span>`
-    : failed ? `<span class="badge failed">Failed</span>`
-    : `<span class="badge pending">${esc(STATUS_TEXT[job.status] || "Working…")}</span>`;
+  const badge = done ? `<span class="badge done">${esc(t("ready"))}</span>`
+    : failed ? `<span class="badge failed">${esc(t("failed"))}</span>`
+    : `<span class="badge pending">${esc(statusText(job.status) || t("st_WORKING"))}</span>`;
   const prog = pending
     ? `<div class="progress ${job.status === "PENDING" ? "indeterminate" : ""}"><span style="width:${STATUS_PROGRESS[job.status] || 10}%"></span></div>`
     : "";
@@ -326,34 +345,34 @@ function renderJob(job) {
   } else if (pending) {
     tracks = `<div class="tracks">${[0, 1].map(() => `
       <div class="track-card"><div class="cover skeleton"></div>
-        <div class="t-meta"><div class="t-title">Composing…</div><div class="t-tags">${esc(job.style || "")}</div></div></div>`).join("")}</div>`;
+        <div class="t-meta"><div class="t-title">${esc(t("composing"))}</div><div class="t-tags">${esc(job.style || "")}</div></div></div>`).join("")}</div>`;
   }
-  const error = failed ? `<div class="error-text">${esc(job.error || STATUS_TEXT[job.status] || "Something went wrong.")}</div>` : "";
+  const error = failed ? `<div class="error-text">${esc(job.error || statusText(job.status) || t("somethingWrong"))}</div>` : "";
   return `
     <article class="job" data-task="${esc(job.taskId)}">
       <div class="job-head">
         <div class="job-prompt" title="${esc(job.summary)}">${esc(job.summary)}</div>
-        <div class="job-actions">${badge}<button class="icon-btn" data-remove="${esc(job.taskId)}" title="Remove" aria-label="Remove">✕</button></div>
+        <div class="job-actions">${badge}<button class="icon-btn" data-remove="${esc(job.taskId)}" title="${esc(t("remove"))}" aria-label="${esc(t("remove"))}">✕</button></div>
       </div>
       ${prog}${tracks}${error}
     </article>`;
 }
 
-function renderTrack(job, t) {
-  const src = t.audio || t.stream;
+function renderTrack(job, tr) {
+  const src = tr.audio || tr.stream;
   const playable = Boolean(src);
-  const dur = t.duration ? `<span class="t-dur">${fmt(t.duration)}</span>` : "";
-  const dl = t.audio ? `<a href="${esc(t.audio)}" target="_blank" rel="noopener" download>Download</a>` : (playable ? `<span class="t-dur">streaming…</span>` : "");
-  const lyr = t.lyrics && !job.instrumental ? `<button type="button" data-copy="${esc(t.id)}">Lyrics</button>` : "";
+  const dur = tr.duration ? `<span class="t-dur">${fmt(tr.duration)}</span>` : "";
+  const dl = tr.audio ? `<a href="${esc(tr.audio)}" target="_blank" rel="noopener" download>${esc(t("download"))}</a>` : (playable ? `<span class="t-dur">${esc(t("streaming"))}</span>` : "");
+  const lyr = tr.lyrics && !job.instrumental ? `<button type="button" data-copy="${esc(tr.id)}">${esc(t("lyrics"))}</button>` : "";
   return `
-    <div class="track-card" data-track="${esc(t.id)}">
-      <button class="cover ${playable ? "" : "skeleton"}" ${playable ? `data-play="${esc(job.taskId)}|${esc(t.id)}"` : "disabled"} aria-label="Play ${esc(t.title)}">
-        ${t.image ? `<img src="${esc(t.image)}" alt="" loading="lazy" />` : ""}
+    <div class="track-card" data-track="${esc(tr.id)}">
+      <button class="cover ${playable ? "" : "skeleton"}" ${playable ? `data-play="${esc(job.taskId)}|${esc(tr.id)}"` : "disabled"} aria-label="${esc(t("play"))} ${esc(tr.title)}">
+        ${tr.image ? `<img src="${esc(tr.image)}" alt="" loading="lazy" />` : ""}
         ${playable ? `<span class="play-ov">▶</span>` : ""}
       </button>
       <div class="t-meta">
-        <div class="t-title" title="${esc(t.title)}">${esc(t.title || "Untitled")}</div>
-        <div class="t-tags" title="${esc(t.tags)}">${esc(t.tags || "")}</div>
+        <div class="t-title" title="${esc(tr.title)}">${esc(tr.title || t("untitled"))}</div>
+        <div class="t-tags" title="${esc(tr.tags)}">${esc(tr.tags || "")}</div>
         <div class="t-links">${dur}${dl}${lyr}</div>
       </div>
     </div>`;
@@ -369,21 +388,21 @@ function findTrack(taskId, id) {
 }
 
 function play(taskId, id) {
-  const t = findTrack(taskId, id);
-  if (!t) return;
+  const tr = findTrack(taskId, id);
+  if (!tr) return;
   if (current && current.taskId === taskId && current.id === id) {
     audio.paused ? audio.play() : audio.pause();
     return;
   }
   current = { taskId, id };
-  audio.src = t.audio || t.stream;
-  audio.play().catch(() => toast("Couldn't play this track yet."));
+  audio.src = tr.audio || tr.stream;
+  audio.play().catch(() => toast(t("cantPlay")));
   $("#player").hidden = false;
   const cover = $("#pCover");
-  if (t.image) { cover.src = t.image; cover.style.visibility = "visible"; }
+  if (tr.image) { cover.src = tr.image; cover.style.visibility = "visible"; }
   else { cover.removeAttribute("src"); cover.style.visibility = "hidden"; }
-  $("#pTitle").textContent = t.title || "Untitled";
-  $("#pTags").textContent = t.tags || "";
+  $("#pTitle").textContent = tr.title || t("untitled");
+  $("#pTags").textContent = tr.tags || "";
   markPlaying();
 }
 
@@ -424,7 +443,7 @@ $("#openLyricsAI").addEventListener("click", () => {
 $("#genLyrics").addEventListener("click", onGenLyrics);
 $("#lyricsPrompt").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); onGenLyrics(); } });
 $("#clearLib").addEventListener("click", () => {
-  if (!confirm("Remove all songs from this browser's library?")) return;
+  if (!confirm(t("confirmClear"))) return;
   jobs = []; save(); render();
 });
 $("#jobs").addEventListener("click", async (e) => {
@@ -435,17 +454,23 @@ $("#jobs").addEventListener("click", async (e) => {
   const cp = e.target.closest("[data-copy]");
   if (cp) {
     const job = jobs.find((j) => j.tracks?.some((t) => t.id === cp.dataset.copy));
-    const t = job?.tracks.find((x) => x.id === cp.dataset.copy);
-    try { await navigator.clipboard.writeText(t.lyrics); toast("Lyrics copied."); }
-    catch { toast("Couldn't copy lyrics."); }
+    const tr = job?.tracks.find((x) => x.id === cp.dataset.copy);
+    try { await navigator.clipboard.writeText(tr.lyrics); toast(t("copied")); }
+    catch { toast(t("cantCopy")); }
   }
 });
 
 // ---------- init ----------
 (async function init() {
-  renderChips(); bindCounters(); bindSliders(); setMode("simple"); render();
+  const saved = safeGet(LS_LANG);
+  const sel = $("#langSelect");
+  sel.innerHTML = Object.entries(LANGS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
+  sel.addEventListener("change", () => setLang(sel.value, true));
+  renderChips(); bindCounters(); bindSliders(); setMode("simple");
+  setLang(pickLang({ saved, browser: navigator.language }));
   try {
     const cfg = await api("config");
+    if (!saved) setLang(pickLang({ country: cfg.country, browser: navigator.language }));
     if (cfg.passwordRequired && !password) await askPassword();
   } catch {}
   refreshCredits();

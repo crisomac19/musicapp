@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Songsmith — AI Music Generator</title>
-  <meta name="description" content="Turn an idea into a full song with AI. Describe it, pick a style, and listen in about a minute." />
+  <title>Compose your song with Dr. Cris</title>
+  <meta name="description" data-i18n-content="metaDesc" content="Turn an idea into a full song with AI. Describe it, pick a style, and listen in about a minute." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,30 +17,36 @@
       <span class="logo" aria-hidden="true">
         <span></span><span></span><span></span><span></span>
       </span>
-      <span class="brand-name">Songsmith</span>
+      <span class="brand-name" data-i18n="brand">Compose with Dr. Cris</span>
     </div>
-    <div class="credits" id="credits" title="Remaining API credits">
-      <span class="dot"></span><span id="creditsValue">— credits</span>
+    <div class="top-right">
+      <label class="lang" title="Language">
+        <span class="sr-only" data-i18n="language">Language</span>
+        <span aria-hidden="true">🌐</span>
+        <select id="langSelect"></select>
+      </label>
+      <div class="credits" id="credits" title="Remaining API credits">
+        <span class="dot"></span><span id="creditsValue">—</span>
+      </div>
     </div>
   </header>
 
   <main class="layout">
     <section class="panel create" aria-labelledby="createTitle">
-      <h1 id="createTitle">Make a song</h1>
-      <p class="sub">Describe an idea and get two full tracks in about a minute.</p>
+      <h1 id="createTitle" data-i18n="h1">Compose your song</h1>
+      <p class="sub" data-i18n="sub">Describe an idea and get two full tracks in about a minute.</p>
 
       <div class="tabs" role="tablist">
-        <button class="tab active" role="tab" aria-selected="true" data-mode="simple">Simple</button>
-        <button class="tab" role="tab" aria-selected="false" data-mode="custom">Custom</button>
+        <button class="tab active" role="tab" aria-selected="true" data-mode="simple" data-i18n="tabSimple">Simple</button>
+        <button class="tab" role="tab" aria-selected="false" data-mode="custom" data-i18n="tabCustom">Custom</button>
       </div>
 
       <form id="genForm" novalidate>
         <!-- SIMPLE MODE -->
         <div class="mode mode-simple">
           <label class="field">
-            <span class="label">Song description</span>
-            <textarea id="prompt" rows="4" maxlength="3000"
-              placeholder="An upbeat summer pop song about a road trip with friends, catchy chorus, female vocals"></textarea>
+            <span class="label" data-i18n="descLabel">Song description</span>
+            <textarea id="prompt" rows="4" maxlength="3000" data-i18n-ph="descPh"></textarea>
             <span class="counter" data-for="prompt">0 / 3000</span>
           </label>
         </div>
@@ -48,59 +54,59 @@
         <!-- CUSTOM MODE -->
         <div class="mode mode-custom" hidden>
           <label class="field">
-            <span class="label">Title <em>optional</em></span>
-            <input id="title" type="text" maxlength="80" placeholder="Midnight Drive" />
+            <span class="label"><span data-i18n="titleLabel">Title</span> <em data-i18n="optional">optional</em></span>
+            <input id="title" type="text" maxlength="80" data-i18n-ph="titlePh" />
           </label>
 
           <div class="field lyrics-field">
             <div class="label-row">
-              <span class="label">Lyrics</span>
-              <button type="button" class="link-btn" id="openLyricsAI">✨ Write with AI</button>
+              <span class="label" data-i18n="lyricsLabel">Lyrics</span>
+              <button type="button" class="link-btn" id="openLyricsAI" data-i18n="writeAI">✨ Write with AI</button>
             </div>
             <div class="lyrics-ai" id="lyricsAI" hidden>
               <div class="inline">
-                <input id="lyricsPrompt" type="text" maxlength="200" placeholder="What should the song be about?" />
-                <button type="button" class="btn small" id="genLyrics">Generate</button>
+                <input id="lyricsPrompt" type="text" maxlength="200" data-i18n-ph="lyricsPromptPh" />
+                <button type="button" class="btn small" id="genLyrics" data-i18n="generate">Generate</button>
               </div>
               <div id="lyricsOptions" class="lyrics-options"></div>
             </div>
             <textarea id="lyrics" rows="9" maxlength="5000"
-              placeholder="[Verse]&#10;Streetlights humming a song of their own&#10;&#10;[Chorus]&#10;..."></textarea>
+              placeholder="[Verse]&#10;...&#10;&#10;[Chorus]&#10;..."></textarea>
             <span class="counter" data-for="lyrics">0 / 5000</span>
           </div>
 
           <label class="field">
-            <span class="label">Exclude styles <em>optional</em></span>
-            <input id="negativeTags" type="text" maxlength="1000" placeholder="heavy metal, screaming" />
+            <span class="label"><span data-i18n="excludeLabel">Exclude styles</span> <em data-i18n="optional">optional</em></span>
+            <input id="negativeTags" type="text" maxlength="1000" data-i18n-ph="excludePh" />
           </label>
 
           <div class="grid-2">
             <label class="field">
-              <span class="label">Vocals</span>
+              <span class="label" data-i18n="vocals">Vocals</span>
               <select id="vocalGender">
-                <option value="">Any</option>
-                <option value="f">Female</option>
-                <option value="m">Male</option>
+                <option value="" data-i18n="any">Any</option>
+                <option value="f" data-i18n="female">Female</option>
+                <option value="m" data-i18n="male">Male</option>
               </select>
             </label>
             <label class="field">
-              <span class="label">Length <em id="durationOut">auto</em></span>
+              <span class="label"><span data-i18n="length">Length</span> <em id="durationOut">auto</em></span>
               <input id="duration" type="range" min="0" max="360" step="10" value="0" />
             </label>
           </div>
 
           <details class="advanced">
-            <summary>Advanced controls</summary>
+            <summary data-i18n="advanced">Advanced controls</summary>
             <label class="field">
-              <span class="label">Style adherence <em id="styleWeightOut">0.65</em></span>
+              <span class="label"><span data-i18n="styleWeight">Style adherence</span> <em id="styleWeightOut">0.65</em></span>
               <input id="styleWeight" type="range" min="0" max="1" step="0.05" value="0.65" />
             </label>
             <label class="field">
-              <span class="label">Weirdness <em id="weirdnessOut">0.50</em></span>
+              <span class="label"><span data-i18n="weirdness">Weirdness</span> <em id="weirdnessOut">0.50</em></span>
               <input id="weirdness" type="range" min="0" max="1" step="0.05" value="0.5" />
             </label>
             <label class="field">
-              <span class="label">Variety between the two takes <em id="varietyOut">Normal</em></span>
+              <span class="label"><span data-i18n="variety">Variety between the two takes</span> <em id="varietyOut">Normal</em></span>
               <input id="variety" type="range" min="0" max="4" step="1" value="1" />
             </label>
           </details>
@@ -108,8 +114,8 @@
 
         <!-- SHARED -->
         <label class="field">
-          <span class="label">Style <em class="simple-only">optional</em></span>
-          <input id="style" type="text" maxlength="1000" placeholder="indie pop, dreamy synths, 110 bpm" />
+          <span class="label"><span data-i18n="styleLabel">Style</span> <em class="simple-only" data-i18n="optional">optional</em></span>
+          <input id="style" type="text" maxlength="1000" data-i18n-ph="stylePh" />
         </label>
         <div class="chips" id="styleChips"></div>
 
@@ -117,14 +123,14 @@
           <label class="switch">
             <input id="instrumental" type="checkbox" />
             <span class="track"><span class="thumb"></span></span>
-            <span>Instrumental</span>
+            <span data-i18n="instrumental">Instrumental</span>
           </label>
           <label class="model">
-            <span>Model</span>
+            <span data-i18n="model">Model</span>
             <select id="model">
-              <option value="V6" selected>V6 · Best</option>
-              <option value="V6_WILD">V6 Wild · Bold</option>
-              <option value="V6_MINI">V6 Mini · Fast</option>
+              <option value="V6" selected data-i18n="modelBest">V6 · Best</option>
+              <option value="V6_WILD" data-i18n="modelWild">V6 Wild · Bold</option>
+              <option value="V6_MINI" data-i18n="modelFast">V6 Mini · Fast</option>
             </select>
           </label>
         </div>
@@ -132,21 +138,21 @@
         <p class="form-error" id="formError" role="alert" hidden></p>
 
         <button type="submit" class="btn primary" id="submitBtn">
-          <span class="btn-label">Create song</span>
+          <span class="btn-label" data-i18n="create">Create song</span>
         </button>
       </form>
     </section>
 
     <section class="panel library" aria-labelledby="libTitle">
       <div class="lib-head">
-        <h2 id="libTitle">Your library</h2>
-        <button class="link-btn" id="clearLib" type="button">Clear</button>
+        <h2 id="libTitle" data-i18n="library">Your library</h2>
+        <button class="link-btn" id="clearLib" type="button" data-i18n="clear">Clear</button>
       </div>
-      <p class="note">Songs are saved in this browser. Audio files are hosted for about 14 days — download the ones you love.</p>
+      <p class="note" data-i18n="libNote">Songs are saved in this browser. Audio files are hosted for about 14 days — download the ones you love.</p>
       <div id="jobs" class="jobs"></div>
       <div class="empty" id="empty">
         <div class="empty-art" aria-hidden="true">♪</div>
-        <p>Nothing here yet.<br />Your songs will appear here.</p>
+        <p data-i18n-html="empty">Nothing here yet.<br />Your songs will appear here.</p>
       </div>
     </section>
   </main>
@@ -170,11 +176,11 @@
   <!-- Password gate -->
   <dialog id="pwDialog">
     <form method="dialog" id="pwForm">
-      <h3>Enter access password</h3>
-      <p class="sub">This site is protected to save generation credits.</p>
+      <h3 data-i18n="pwTitle">Enter access password</h3>
+      <p class="sub" data-i18n="pwSub">This site is protected to save generation credits.</p>
       <input id="pwInput" type="password" autocomplete="current-password" required />
-      <p class="form-error" id="pwError" hidden>Wrong password.</p>
-      <button class="btn primary" type="submit">Continue</button>
+      <p class="form-error" id="pwError" hidden data-i18n="pwWrong">Wrong password.</p>
+      <button class="btn primary" type="submit" data-i18n="continue">Continue</button>
     </form>
   </dialog>
 

@@ -209,3 +209,15 @@ dialog::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(4px); }
 dialog h3 { margin: 0; }
 dialog input { margin-bottom: 14px; }
 .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--line); padding: 10px 16px; border-radius: 12px; font-size: 14px; z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+
+/* Language picker */
+.top-right { display: flex; align-items: center; gap: 10px; }
+.lang { display: inline-flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line); padding: 4px 4px 4px 10px; border-radius: 999px; font-size: 13px; }
+.lang select { border: 0; background-color: transparent; padding: 3px 26px 3px 2px; width: auto; font-size: 13px; color: var(--muted); }
+.lang select:focus { box-shadow: none; color: var(--text); }
+.lang option { background: var(--panel); color: var(--text); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 520px) {
+  .brand { font-size: 16px; }
+  .credits { display: none; }
+}
